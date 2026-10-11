@@ -1,0 +1,41 @@
+{
+  "name": "metro-tree-shaking",
+  "version": "0.1.0",
+  "description": "Tree shaking for React Native CLI apps, powered by Expo's Metro tree shaker",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./babel": "./babel.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "babel.js"
+  ],
+  "keywords": [
+    "react-native",
+    "metro",
+    "tree-shaking",
+    "expo"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "babel-preset-expo": "~57.0.14",
+    "expo": "~57.0.27"
+  },
+  "peerDependencies": {
+    "react-native": ">=0.86.0"
+  },
+  "devDependencies": {
+    "@react-native/metro-config": "0.86.3",
+    "lodash-es": "^4.18.1",
+    "metro": "^0.84.5",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  },
+  "engines": {
+    "node": ">= 22.11.0"
+  }
+}
