@@ -1,2 +1,8 @@
-// In an app: presets: ['module:metro-tree-shaking/babel']
-module.exports = { presets: [require.resolve('../../babel')] };
+module.exports = {
+  presets: [
+    [
+      'module:@react-native/babel-preset',
+      { disableImportExportTransform: true },
+    ],
+  ],
+};

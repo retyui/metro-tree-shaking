@@ -17,15 +17,19 @@ module.exports = withTreeShaking(mergeConfig(getDefaultConfig(__dirname), config
 ```
 
 ```js
-// babel.config.js
-module.exports = { presets: ['module:metro-tree-shaking/babel'] };
+// babel.config.js: keep the RN preset, but leave `import`/`export` to Metro
+module.exports = {
+  presets: [
+    ['module:@react-native/babel-preset', { disableImportExportTransform: true }],
+  ],
+};
 ```
 
 Release builds are now tree-shaken. For example, `import { get } from 'lodash-es'` bundles 53 of lodash-es's ~640 modules.
 
 ## Implementation: based on Expo
 
-This package reuses [Expo's Metro tree shaking](https://docs.expo.dev/guides/tree-shaking/), without Expo CLI or Expo Modules (Expo's native code is not linked). It turns on the options Expo CLI normally passes for production builds and swaps in Expo's transformer and serializer. It also adds one extra step that drops modules nothing imports any more.
+This package reuses [Expo's Metro tree shaking](https://docs.expo.dev/guides/tree-shaking/), without Expo CLI or Expo Modules (Expo's native code is not linked). It turns on the options Expo CLI normally passes for production builds and swaps in Expo's transformer and serializer. It adds the two Babel plugins Expo's tree shaking normally gets from `babel-preset-expo`: CommonJS export detection, and `Platform.OS` / `__DEV__` inlining. It also adds one extra step that drops modules nothing imports any more.
 
 ## Alternatives
 

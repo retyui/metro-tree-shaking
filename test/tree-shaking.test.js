@@ -42,6 +42,8 @@ function run(code) {
   return { ...context.__result };
 }
 
+const EXPECTED = { add: 5, get: 'it works', greet: 'hello cjs' };
+
 const lodashModules = sources =>
   sources.filter(s => s.includes('/lodash-es/')).length;
 
@@ -49,17 +51,19 @@ test('production bundle is tree-shaken and still works', async () => {
   const { code, sources } = await bundle({ dev: false });
 
   assert.doesNotMatch(code, /TREE_SHAKING_MARKER/);
+  assert.doesNotMatch(code, /DEV_ONLY_MARKER/);
   assert.ok(
     lodashModules(sources) < 100,
     `${lodashModules(sources)} lodash-es modules`,
   );
-  assert.deepStrictEqual(run(code), { add: 5, get: 'it works' });
+  assert.deepStrictEqual(run(code), EXPECTED);
 });
 
 test('development bundle is not tree-shaken and still works', async () => {
   const { code, sources } = await bundle({ dev: true });
 
   assert.match(code, /TREE_SHAKING_MARKER/);
+  assert.match(code, /DEV_ONLY_MARKER/);
   assert.ok(lodashModules(sources) > 600);
-  assert.deepStrictEqual(run(code), { add: 5, get: 'it works' });
+  assert.deepStrictEqual(run(code), EXPECTED);
 });

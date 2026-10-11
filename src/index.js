@@ -39,7 +39,7 @@ function withTreeShaking(config) {
     transformerPath: require.resolve('./transform-worker'),
     transformer: {
       ...config.transformer,
-      babelTransformerPath: expoMetroConfigPath('babel-transformer'),
+      babelTransformerPath: require.resolve('./babel-transformer'),
       // Expo's Babel transformer loads babel.config.js itself; lookup would apply it twice.
       enableBabelRCLookup: undefined,
       async getTransformOptions(entryPoints, options, getDependenciesOf) {
@@ -48,10 +48,8 @@ function withTreeShaking(config) {
           options,
           getDependenciesOf,
         );
-        if (options.dev || !isTreeShakingEnabled()) {
-          return result;
-        }
-        // Keep `import`/`export` until the whole graph has been analyzed.
+        // `import`/`export` are kept by Babel (`disableImportExportTransform`)
+        // and compiled by Metro instead, so tree shaking can analyze them.
         return {
           ...result,
           transform: { ...result?.transform, experimentalImportSupport: true },
