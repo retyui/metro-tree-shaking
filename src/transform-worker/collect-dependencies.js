@@ -7,7 +7,8 @@
  *
  * Copied from `@expo/metro-config/src/transform-worker/collect-dependencies.ts` (SDK 58).
  * Changes: TS -> JS, removed web worker support (`new Worker(new URL())`,
- * `require.unstable_resolveWorker`) and Expo debug events.
+ * `require.unstable_resolveWorker`) and Expo debug events. `export * as ns from` uses all exports
+ * of the target module (`exportNames: ['*']`).
  */
 'use strict';
 const { traverse, template, types: t } = require('@babel/core');
@@ -313,6 +314,11 @@ function getExportNamesFromPath(path) {
       return ['*'];
     } else if (t.isExportNamedDeclaration(path.node)) {
       return path.node.specifiers.map((specifier) => {
+        // `export * as ns from './mod'` re-exports the whole module. Expo never sees this syntax,
+        // `babel-preset-expo` turns it into `import * as ns` + `export { ns }` first.
+        if (specifier.type === 'ExportNamespaceSpecifier') {
+          return '*';
+        }
         const exportedName = t.isIdentifier(specifier.exported)
           ? specifier.exported.name
           : specifier.exported.value;

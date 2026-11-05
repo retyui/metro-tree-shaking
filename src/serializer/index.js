@@ -2,6 +2,7 @@
 const { requireMetroPrivate, interopDefault } = require('../metro');
 const { isResolvedDependency } = require('../utils/isResolvedDependency');
 const { reconcileTransformSerializerPlugin } = require('./reconcileTransformSerializerPlugin');
+const { collectReport, formatReport, getReportMode } = require('./report');
 const { treeShakeSerializer } = require('./treeShakeSerializerPlugin');
 
 function getDefaultSerializer() {
@@ -102,8 +103,15 @@ function createTreeShakingSerializer(originalSerializer) {
     ];
 
     props = await treeShakeSerializer(...props);
+    const reportMode = getReportMode();
+    // Collected before reconcile, which drops the ASTs.
+    const report = reportMode === 'off' ? null : collectReport(props[2], props[3]);
     props = await reconcileTransformSerializerPlugin(...props);
     pruneUnreachableModules(props[2], [entryPoint, ...(options.runBeforeMainModule ?? [])]);
+    if (report) {
+      const message = formatReport(report, props[2], props[3], reportMode);
+      if (message) console.warn(message);
+    }
 
     return serializer(props[0], props[1], props[2], options);
   };

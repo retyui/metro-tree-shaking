@@ -223,7 +223,8 @@ async function microBundle({
       sourceMapUrl: options.sourceMaps
         ? 'https://localhost:8081/indedx.bundle?dev=false'
         : undefined,
-      asyncRequireModulePath: 'expo-mock/async-require',
+      // Metro passes the resolved path.
+      asyncRequireModulePath: path.join(projectRoot, 'expo-mock/async-require'),
       sourceUrl: options.sourceUrl,
       createModuleId(filePath) {
         return filePath;

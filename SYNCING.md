@@ -45,7 +45,7 @@ Upstream paths are relative to `packages/@expo/metro-config/src/` unless they st
 | `src/__tests__/utils/mini-metro.js` | `serializer/fork/__tests__/mini-metro.ts` | adapted |
 | `src/__tests__/utils/serializer-test-utils.js` | `serializer/fork/__tests__/serializer-test-utils.ts` | adapted |
 
-Local only (no upstream counterpart): `src/index.js`, `src/compat.js`, `src/metro.js`, `src/utils/isResolvedDependency.js`, `src/__tests__/self-reference.test.js`, `src/__tests__/side-effects-field.test.js`.
+Local only (no upstream counterpart): `src/index.js`, `src/compat.js`, `src/metro.js`, `src/utils/isResolvedDependency.js`, `src/serializer/report.js`, `src/transform-worker/export-namespace-from.js`, `src/transform-worker/babel-transformer.js`, `src/__tests__/report.test.js`, `src/__tests__/self-reference.test.js`, `src/__tests__/side-effects-field.test.js`, `src/__tests__/namespace-exports.test.js`.
 
 ## Local deviations (keep these)
 
@@ -61,7 +61,10 @@ These differ from Expo on purpose. Re-apply them if a sync touches the surroundi
 8. **Self references don't count as usage** (`isUsageOfModuleBinding` in `treeShakeSerializerPlugin.js`). Without it, classes lowered by `@react-native/babel-preset` (default transform profile) and recursive functions are never removed. Covered by `src/__tests__/self-reference.test.js`.
 9. **`collect-dependencies.js`**: web worker support (`new Worker(new URL())`, `require.unstable_resolveWorker`) and debug events were removed. Metro has no `'worker'` dependency type.
 10. **Original import specifier counts are stored per node** (`originalImportSpecifierCounts` WeakMap in `treeShakeSerializerPlugin.js`). Expo uses `path.opts.originalSpecifiers`, but `path.opts` is shared by all nodes of a Babel traversal, so every import got the first import's count and side-effect imports after a named import were removed. Covered by the "import order" tests in `src/__tests__/side-effects-field.test.js`.
-11. **Tests:** inline snapshots are our own, since output differs from Expo's live bindings. Tests for chunk splitting, CSS and React Compiler were removed. The weak-import test lost its "separate chunk" assertions. The harness uses `@react-native/metro-babel-transformer`, the `hermes-stable` profile, `enableBabelRuntime: false`, and restores Jest's `Error.prepareStackTrace` after every bundle (Babel replaces it, which breaks inline snapshot writing).
+11. **`export * as ns from` is handled** (`babel-preset-expo` rewrites it into `import * as ns` + `export { ns }`, `@react-native/babel-preset` keeps it). `getExportNamesFromPath` in `collect-dependencies.js` records `'*'` for it, and `removeUnusedExports` in `treeShakeSerializerPlugin.js` removes unused namespace specifiers. Covered by `src/__tests__/namespace-exports.test.js`.
+12. **Metro 0.84 only: `export * as ns from` is rewritten** into `import * as ns` + `export { ns }` by `src/transform-worker/export-namespace-from.js`, because Metro 0.84's `importExportPlugin` crashes on it (dev builds too). The worker adds the plugin to its own Babel call in production, and wraps the project's Babel transformer (`src/transform-worker/babel-transformer.js`) for everything it delegates to `metro-transform-worker`. Remove both when Metro 0.84 is no longer supported.
+13. **Report** (`src/serializer/report.js`): collected after tree shaking and before reconcile (it needs the ASTs and `hasCjsExports`), printed after unreachable modules are pruned. Uses `getPackageJsonSideEffect`, added to `sideEffects.js`. The test harness sets `METRO_TREE_SHAKING_REPORT=0`.
+14. **Tests:** inline snapshots are our own, since output differs from Expo's live bindings. Tests for chunk splitting, CSS and React Compiler were removed. The weak-import test lost its "separate chunk" assertions. The harness uses `@react-native/metro-babel-transformer`, the `hermes-stable` profile, `enableBabelRuntime: false`, and restores Jest's `Error.prepareStackTrace` after every bundle (Babel replaces it, which breaks inline snapshot writing).
 
 ## Not ported (ignore upstream changes here)
 

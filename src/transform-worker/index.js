@@ -29,6 +29,7 @@ const {
 } = require('../metro');
 const collectDependencies = require('./collect-dependencies');
 const { detectDynamicExports } = require('./detect-dynamic-exports');
+const { exportNamespaceFromPlugin } = require('./export-namespace-from');
 
 /** Key on `config.transformer` holding the transformer we delegate to. */
 const UPSTREAM_TRANSFORMER_KEY = 'metroTreeShaking_upstreamTransformerPath';
@@ -171,6 +172,8 @@ async function transformOptimized(config, projectRoot, filename, data, options) 
       importLocationsPlugin,
       // populates metadata.hasCjsExports (normally added by `babel-preset-expo`)
       detectDynamicExports,
+      // Metro 0.84 can't transform `export * as ns from`
+      ...(compat.usesVlqMaps ? [] : [exportNamespaceFromPlugin]),
     ])
   );
   const metadata = transformResult.metadata;
@@ -288,6 +291,12 @@ async function transformOptimized(config, projectRoot, filename, data, options) 
 
 async function transform(config, projectRoot, filename, data, options, ...rest) {
   if (!shouldOptimize(filename, options)) {
+    if (!compat.usesVlqMaps && options.type !== 'asset' && !filename.endsWith('.json')) {
+      // Metro 0.84 can't transform `export * as ns from`, add a Babel plugin rewriting it.
+      const babelTransformer = require('./babel-transformer');
+      babelTransformer.setUpstreamBabelTransformerPath(config.babelTransformerPath);
+      config = { ...config, babelTransformerPath: require.resolve('./babel-transformer') };
+    }
     return getUpstreamTransformer(config).transform(
       config,
       projectRoot,
@@ -307,6 +316,8 @@ function getCacheKey(config, opts) {
     require.resolve('../compat'),
     require.resolve('./collect-dependencies'),
     require.resolve('./detect-dynamic-exports'),
+    require.resolve('./export-namespace-from'),
+    require.resolve('./babel-transformer'),
   ]);
   return [
     getUpstreamTransformer(config).getCacheKey(config, opts),

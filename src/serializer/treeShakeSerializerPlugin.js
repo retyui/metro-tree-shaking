@@ -9,6 +9,7 @@
  * functions) or to a local binding shadowing it (classes compiled to functions) no longer mark the
  * export as used. The original specifier count of imports is stored per import node (Expo shares
  * one value between all imports of a file, which removed side-effect imports after a named import).
+ * Unused `export * as ns from` specifiers are removed.
  */
 'use strict';
 const { traverse, types } = require('@babel/core');
@@ -519,8 +520,10 @@ async function treeShakeSerializer(entryPoint, preModules, graph, options) {
             for (let i = 0; i < path.node.specifiers.length; i++) {
               const specifier = path.node.specifiers[i];
               if (
-                types.isExportSpecifier(specifier) &&
-                types.isIdentifier(specifier.local) &&
+                // `export { a as b }` or `export * as ns from './mod'` (kept as is by
+                // `@react-native/babel-preset`, `babel-preset-expo` converts it to an import).
+                ((types.isExportSpecifier(specifier) && types.isIdentifier(specifier.local)) ||
+                  types.isExportNamespaceSpecifier(specifier)) &&
                 types.isIdentifier(specifier.exported) &&
                 possibleUnusedExports.includes(specifier.exported.name) &&
                 !isExportUsed(specifier.exported.name)

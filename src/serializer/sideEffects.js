@@ -4,7 +4,8 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * Copied from `@expo/metro-config/src/serializer/sideEffects.ts` (SDK 58). Changes: TS -> JS.
+ * Copied from `@expo/metro-config/src/serializer/sideEffects.ts` (SDK 58). Changes: TS -> JS,
+ * added `getPackageJsonSideEffect` (used by the report).
  */
 
 'use strict';
@@ -133,8 +134,19 @@ function isVirtualModule(path) {
   return path.startsWith('\0');
 }
 
+// Not from Expo: the module's own `package.json#sideEffects` value, ignoring its dependencies.
+// `null` when the package doesn't declare it.
+function getPackageJsonSideEffect(options, modulePath) {
+  if (isVirtualModule(modulePath)) {
+    return false;
+  }
+  const isSideEffect = getPackageJsonMatcher(options, modulePath);
+  return isSideEffect == null ? null : isSideEffect(modulePath);
+}
+
 module.exports = {
   hasSideEffectWithDebugTrace,
   _createSideEffectMatcher,
   isVirtualModule,
+  getPackageJsonSideEffect,
 };

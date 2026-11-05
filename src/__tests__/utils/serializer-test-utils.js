@@ -15,6 +15,9 @@ const { microBundle } = require('./mini-metro');
 // locating `toMatchInlineSnapshot()` call sites. Restore Jest's after each bundle.
 const jestPrepareStackTrace = Error.prepareStackTrace;
 
+// Don't print the tree shaking report in tests, unless a test sets it.
+process.env.METRO_TREE_SHAKING_REPORT ??= '0';
+
 async function serializeOptimizeAsync(fs, options = {}) {
   const { treeshake = false, ...bundleOptions } = options;
   const serial = await microBundle({

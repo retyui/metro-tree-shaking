@@ -39,6 +39,33 @@ That's it. `react-native bundle`, `react-native run-android --mode release`, Xco
 | 0.87         | 0.87  |
 | 0.88         | 0.87  |
 
+Metro 0.84 can't transform `export * as ns from`; on that version it's rewritten automatically (`import * as ns` + `export { ns }`).
+
+## Report
+
+Production builds print which modules could not be fully tree-shaken, and why:
+
+```
+metro-tree-shaking: 14 modules could not be fully tree-shaken
+  8 CommonJS, exports can not be removed: react-native-svg, lodash, +3 more
+  3 "sideEffects": true in package.json, kept whenever imported: react-native-reanimated
+  2 ES modules used as a namespace, all exports kept: src/utils/index.js
+  1 ES modules loaded with require(), all exports kept: src/api.js
+  Set METRO_TREE_SHAKING_REPORT=1 for details, or 0 to hide this report.
+```
+
+| `METRO_TREE_SHAKING_REPORT` | Output |
+| --- | --- |
+| not set | short summary |
+| `1` | every file (app files one by one, `node_modules` grouped by package) and who imports it |
+| `0` | nothing |
+
+```sh
+METRO_TREE_SHAKING_REPORT=1 npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output /tmp/main.jsbundle
+```
+
+App files in the report are the ones you can fix: use named imports instead of `import * as` / `require()`, and ES modules instead of `module.exports`.
+
 ## How it works
 
 `withTreeShaking(config)`:
@@ -55,6 +82,7 @@ Improvements over Expo:
 
 - An export referenced only from inside its own declaration (a recursive function) or through a local binding that shadows it is treated as unused. This matters for React Native because `@react-native/babel-preset` compiles classes to functions with the `default` transform profile (`var A = function () { function A() {} … }()`), which made every exported class look used.
 - Import order doesn't matter. In Expo, every import of a file is treated like the file's first one, so a side-effect import (`import 'lib/polyfill'`) after a named import could be removed.
+- `export * as ns from` is supported. `babel-preset-expo` rewrites it before tree shaking, but `@react-native/babel-preset` keeps it, and Expo's logic then removed exports used through `ns`.
 
 ## Tips & limitations
 
@@ -67,7 +95,8 @@ Improvements over Expo:
   | Module imported for its side effects (`import 'lib/polyfill'`) | kept | removed | kept |
 
   A module counts as `true` if it, or anything it imports, is marked `true`. Modules without any code are always removed (a module that only becomes empty after tree shaking is still bundled when marked `true`). If a package without the field relies on top-level code that runs on import, import it for side effects (`import 'lib'`) or mark it `"sideEffects": true`.
-- **CommonJS isn't shaken.** Modules using `module.exports`/`exports` or `require()` keep all their exports.
+- **CommonJS isn't shaken.** Modules using `module.exports`/`exports` or `require()` keep all their exports, and so does `export * from` a CommonJS module.
+- **Namespaces keep the whole module.** `import * as ns` and `export * as ns from` keep every export of the module once `ns` is used, since any property may be read; an unused `ns` is removed. Prefer named imports. `export * from` an ES module is shaken like named re-exports.
 - **Dev server.** Requests with `dev=false` to the dev server are tree-shaken on a copy of the graph. The source map served separately for such a request (`.map` URL) is not tree-shaken.
 
 ## Tests
