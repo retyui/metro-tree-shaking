@@ -49,7 +49,7 @@ That's it. `react-native bundle`, `react-native run-android --mode release`, Xco
 
 An existing `serializer.customSerializer` is kept: it receives the tree-shaken graph.
 
-The tree-shaking logic is copied from [`@expo/metro-config`](https://github.com/expo/expo/tree/main/packages/@expo/metro-config) (SDK 58) and kept as local files; see the header of each file in `src/` for what was changed. The final `import`/`export` transform uses Metro's own `importExportPlugin` (the same one Metro uses in development with `experimentalImportSupport`) instead of Expo's fork.
+The tree-shaking logic is copied from [`@expo/metro-config`](https://github.com/expo/expo/tree/main/packages/@expo/metro-config) (SDK 58) and kept as local files; see the header of each file in `src/` for what was changed. To pull in upstream changes, follow [SYNCING.md](SYNCING.md). The final `import`/`export` transform uses Metro's own `importExportPlugin` (the same one Metro uses in development with `experimentalImportSupport`) instead of Expo's fork.
 
 One improvement over Expo: an export referenced only from inside its own declaration (a recursive function) or through a local binding that shadows it is treated as unused. This matters for React Native because `@react-native/babel-preset` compiles classes to functions with the `default` transform profile (`var A = function () { function A() {} … }()`), which made every exported class look used.
 
