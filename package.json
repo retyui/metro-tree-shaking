@@ -1,6 +1,6 @@
 {
   "name": "metro-tree-shaking",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.0",
   "description": "Expo's Metro tree-shaking for bare React Native projects. One call: withTreeShaking(config).",
   "keywords": [
     "react-native",
