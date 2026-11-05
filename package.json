@@ -1,0 +1,46 @@
+{
+  "name": "metro-tree-shaking",
+  "version": "0.1.0",
+  "description": "Expo's Metro tree-shaking for bare React Native projects. One call: withTreeShaking(config).",
+  "keywords": [
+    "react-native",
+    "metro",
+    "tree-shaking",
+    "dead-code-elimination"
+  ],
+  "license": "MIT",
+  "main": "src/index.js",
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "jest"
+  },
+  "engines": {
+    "node": ">=20.19.4"
+  },
+  "peerDependencies": {
+    "metro": "^0.84.3 || ^0.87.0"
+  },
+  "dependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/generator": "^7.25.0",
+    "@jridgewell/sourcemap-codec": "^1.5.0",
+    "picomatch": "^4.0.2"
+  },
+  "devDependencies": {
+    "@react-native/babel-preset": "0.88.1",
+    "@react-native/metro-babel-transformer": "0.88.1",
+    "jest": "^30.0.0",
+    "metro": "0.87.3",
+    "metro-config": "0.87.3",
+    "metro-minify-terser": "0.87.3"
+  },
+  "jest": {
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  }
+}
