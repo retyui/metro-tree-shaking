@@ -56,7 +56,16 @@ One improvement over Expo: an export referenced only from inside its own declara
 ## Tips & limitations
 
 - **Production only.** Like Expo, nothing is removed when `dev: true`.
-- **Mark packages as side-effect free.** Unused imports of modules are only dropped when the package declares `"sideEffects": false` (or a list) in its `package.json`. Unknown modules are assumed to have side effects.
+- **`package.json#sideEffects`.** Unused exports are removed in every case. Whether a whole imported module can be dropped depends on the field (a list of globs is matched per file):
+
+  | | no field | `false` | `true` |
+  | --- | --- | --- | --- |
+  | Module imported only for names that are never used (`import { x } from 'lib'`) | removed, including its top-level code | removed | kept |
+  | Module imported for its side effects (`import 'lib/polyfill'`) | kept\* | removed | kept |
+
+  A module counts as `true` if it, or anything it imports, is marked `true`. Modules without any code are always removed (a module that only becomes empty after tree shaking is still bundled when marked `true`). If a package without the field relies on top-level code that runs on import, import it for side effects (`import 'lib'`) or mark it `"sideEffects": true`.
+
+  \* Known issue (inherited from Expo): when a file's first import has specifiers, the side-effect imports after it in that file are removed. Make a side-effect import the first import of the file to keep them.
 - **CommonJS isn't shaken.** Modules using `module.exports`/`exports` or `require()` keep all their exports.
 - **Dev server.** Requests with `dev=false` to the dev server are tree-shaken on a copy of the graph. The source map served separately for such a request (`.map` URL) is not tree-shaken.
 
