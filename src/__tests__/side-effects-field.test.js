@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Not from Expo. Confirms the `package.json#sideEffects` behavior documented in the README
- * ("Tips & limitations"), including the known import-order issue inherited from Expo.
+ * ("Tips & limitations"), and that import order doesn't change the result (it did in Expo).
  */
 const { serializeShakingAsync } = require('./utils/serializer-test-utils');
 
@@ -65,7 +65,6 @@ console.log(used);
   });
 
   it(`${sideEffectImportModule === 'kept' ? 'keeps' : 'removes'} a module imported for its side effects`, async () => {
-    // The side-effect import comes first, see the known issue below.
     const source = await bundle({
       'index.js': `
 import './node_modules/lib/polyfill.js';
@@ -133,13 +132,10 @@ console.log(used);
   expect(source).toMatch('/app/node_modules/lib/named.js');
 });
 
-describe('known issue: import order (inherited from Expo)', () => {
-  // Expo stores the original specifier count in `path.opts`, which Babel shares between all nodes of
-  // a traversal, so every import in a file uses the count of the file's first import.
-  //
-  // `test.failing` passes while the bug exists. Once fixed, it fails: turn it into a normal test and
-  // update the README.
-  test.failing(`keeps a side-effect import that follows a named import (no field)`, async () => {
+// Expo stores the original specifier count of imports in `path.opts`, which Babel shares between all
+// nodes of a traversal, so every import of a file used the count of the file's first import.
+describe('import order', () => {
+  it(`keeps a side-effect import that follows a named import (no field)`, async () => {
     const source = await bundle({
       'index.js': `
 import { used } from './node_modules/lib/used.js';
@@ -148,10 +144,11 @@ console.log(used);
 `,
       ...libFiles(undefined),
     });
+    expect(source).toMatch('USED_VALUE');
     expect(source).toMatch('POLYFILL_TOP_LEVEL');
   });
 
-  it(`keeps all side-effect imports when the file's first import is a side-effect import (workaround)`, async () => {
+  it(`keeps every side-effect import, wherever it is (no field)`, async () => {
     const source = await bundle({
       'index.js': `
 import './node_modules/lib/polyfill.js';
@@ -163,5 +160,19 @@ console.log(used);
     });
     expect(source).toMatch('POLYFILL_TOP_LEVEL');
     expect(source).toMatch('POLYFILL2_TOP_LEVEL');
+  });
+
+  it(`removes a module imported only for unused names that follows a side-effect import (no field)`, async () => {
+    const source = await bundle({
+      'index.js': `
+import './node_modules/lib/polyfill.js';
+import { used } from './node_modules/lib/used.js';
+import { neverUsed } from './node_modules/lib/named.js';
+console.log(used);
+`,
+      ...libFiles(undefined),
+    });
+    expect(source).toMatch('POLYFILL_TOP_LEVEL');
+    expect(source).not.toMatch('NAMED_MODULE_TOP_LEVEL');
   });
 });

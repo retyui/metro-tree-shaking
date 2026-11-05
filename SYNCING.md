@@ -45,7 +45,7 @@ Upstream paths are relative to `packages/@expo/metro-config/src/` unless they st
 | `src/__tests__/utils/mini-metro.js` | `serializer/fork/__tests__/mini-metro.ts` | adapted |
 | `src/__tests__/utils/serializer-test-utils.js` | `serializer/fork/__tests__/serializer-test-utils.ts` | adapted |
 
-Local only (no upstream counterpart): `src/index.js`, `src/compat.js`, `src/metro.js`, `src/utils/isResolvedDependency.js`, `src/__tests__/self-reference.test.js`.
+Local only (no upstream counterpart): `src/index.js`, `src/compat.js`, `src/metro.js`, `src/utils/isResolvedDependency.js`, `src/__tests__/self-reference.test.js`, `src/__tests__/side-effects-field.test.js`.
 
 ## Local deviations (keep these)
 
@@ -60,7 +60,8 @@ These differ from Expo on purpose. Re-apply them if a sync touches the surroundi
 7. **The dev server graph is copied** before shaking (`cloneGraph`). One-shot builds (`sourceUrl == null`) shake in place like Expo.
 8. **Self references don't count as usage** (`isUsageOfModuleBinding` in `treeShakeSerializerPlugin.js`). Without it, classes lowered by `@react-native/babel-preset` (default transform profile) and recursive functions are never removed. Covered by `src/__tests__/self-reference.test.js`.
 9. **`collect-dependencies.js`**: web worker support (`new Worker(new URL())`, `require.unstable_resolveWorker`) and debug events were removed. Metro has no `'worker'` dependency type.
-10. **Tests:** inline snapshots are our own, since output differs from Expo's live bindings. Tests for chunk splitting, CSS and React Compiler were removed. The weak-import test lost its "separate chunk" assertions. The harness uses `@react-native/metro-babel-transformer`, the `hermes-stable` profile, `enableBabelRuntime: false`, and restores Jest's `Error.prepareStackTrace` after every bundle (Babel replaces it, which breaks inline snapshot writing).
+10. **Original import specifier counts are stored per node** (`originalImportSpecifierCounts` WeakMap in `treeShakeSerializerPlugin.js`). Expo uses `path.opts.originalSpecifiers`, but `path.opts` is shared by all nodes of a Babel traversal, so every import got the first import's count and side-effect imports after a named import were removed. Covered by the "import order" tests in `src/__tests__/side-effects-field.test.js`.
+11. **Tests:** inline snapshots are our own, since output differs from Expo's live bindings. Tests for chunk splitting, CSS and React Compiler were removed. The weak-import test lost its "separate chunk" assertions. The harness uses `@react-native/metro-babel-transformer`, the `hermes-stable` profile, `enableBabelRuntime: false`, and restores Jest's `Error.prepareStackTrace` after every bundle (Babel replaces it, which breaks inline snapshot writing).
 
 ## Not ported (ignore upstream changes here)
 

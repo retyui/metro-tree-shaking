@@ -7,7 +7,8 @@
  * Copied from `@expo/metro-config/src/serializer/treeShakeSerializerPlugin.ts` (SDK 58).
  * Changes: TS -> JS. References to an export from inside its own declaration (recursive
  * functions) or to a local binding shadowing it (classes compiled to functions) no longer mark the
- * export as used.
+ * export as used. The original specifier count of imports is stored per import node (Expo shares
+ * one value between all imports of a file, which removed side-effect imports after a named import).
  */
 'use strict';
 const { traverse, types } = require('@babel/core');
@@ -105,6 +106,10 @@ function getExportsThatAreNotUsedInModule(ast) {
   });
   return unusedExports;
 }
+
+/** Number of specifiers each `ImportDeclaration` node had before tree shaking removed any. */
+const originalImportSpecifierCounts = new WeakMap();
+
 // Whether a reference to an exported name uses the module-level binding from outside of its own
 // declaration. Not a usage:
 // - a reference to a local binding shadowing the export, e.g. the inner function of a class compiled
@@ -646,12 +651,16 @@ async function treeShakeSerializer(entryPoint, preModules, graph, options) {
         }
       },
       ImportDeclaration(path) {
-        // Mark the path with some metadata indicating that it originally had `n` specifiers.
+        // Remember how many specifiers the import originally had, before tree shaking removed any.
         // This is used to determine if the import was side-effecty.
-
+        //
+        // NOTE: Expo stores this on `path.opts`, which Babel shares between all nodes of the
+        // traversal, so every import used the count of the file's first import.
         // NOTE: This could be a problem if the AST is re-parsed.
         // TODO: This doesn't account for `import {} from './foo'`
-        path.opts.originalSpecifiers ??= path.node.specifiers.length;
+        if (!originalImportSpecifierCounts.has(path.node)) {
+          originalImportSpecifierCounts.set(path.node, path.node.specifiers.length);
+        }
         importDecs.push(path);
       },
     });
@@ -669,7 +678,7 @@ async function treeShakeSerializer(entryPoint, preModules, graph, options) {
     importDecs.forEach((path) => {
       const importModuleId = path.node.source.value;
       const originalSize = path.node.specifiers.length;
-      const absoluteOriginalSize = path.opts.originalSpecifiers ?? originalSize;
+      const absoluteOriginalSize = originalImportSpecifierCounts.get(path.node) ?? originalSize;
       const isUsed = (specifier) => !unusedImports.includes(specifier.local.name);
       path.node.specifiers = path.node.specifiers.filter(isUsed);
       if (originalSize !== path.node.specifiers.length) {

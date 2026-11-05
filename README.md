@@ -51,7 +51,10 @@ An existing `serializer.customSerializer` is kept: it receives the tree-shaken g
 
 The tree-shaking logic is copied from [`@expo/metro-config`](https://github.com/expo/expo/tree/main/packages/@expo/metro-config) (SDK 58) and kept as local files; see the header of each file in `src/` for what was changed. To pull in upstream changes, follow [SYNCING.md](SYNCING.md). The final `import`/`export` transform uses Metro's own `importExportPlugin` (the same one Metro uses in development with `experimentalImportSupport`) instead of Expo's fork.
 
-One improvement over Expo: an export referenced only from inside its own declaration (a recursive function) or through a local binding that shadows it is treated as unused. This matters for React Native because `@react-native/babel-preset` compiles classes to functions with the `default` transform profile (`var A = function () { function A() {} … }()`), which made every exported class look used.
+Improvements over Expo:
+
+- An export referenced only from inside its own declaration (a recursive function) or through a local binding that shadows it is treated as unused. This matters for React Native because `@react-native/babel-preset` compiles classes to functions with the `default` transform profile (`var A = function () { function A() {} … }()`), which made every exported class look used.
+- Import order doesn't matter. In Expo, every import of a file is treated like the file's first one, so a side-effect import (`import 'lib/polyfill'`) after a named import could be removed.
 
 ## Tips & limitations
 
@@ -61,11 +64,9 @@ One improvement over Expo: an export referenced only from inside its own declara
   | | no field | `false` | `true` |
   | --- | --- | --- | --- |
   | Module imported only for names that are never used (`import { x } from 'lib'`) | removed, including its top-level code | removed | kept |
-  | Module imported for its side effects (`import 'lib/polyfill'`) | kept\* | removed | kept |
+  | Module imported for its side effects (`import 'lib/polyfill'`) | kept | removed | kept |
 
   A module counts as `true` if it, or anything it imports, is marked `true`. Modules without any code are always removed (a module that only becomes empty after tree shaking is still bundled when marked `true`). If a package without the field relies on top-level code that runs on import, import it for side effects (`import 'lib'`) or mark it `"sideEffects": true`.
-
-  \* Known issue (inherited from Expo): when a file's first import has specifiers, the side-effect imports after it in that file are removed. Make a side-effect import the first import of the file to keep them.
 - **CommonJS isn't shaken.** Modules using `module.exports`/`exports` or `require()` keep all their exports.
 - **Dev server.** Requests with `dev=false` to the dev server are tree-shaken on a copy of the graph. The source map served separately for such a request (`.map` URL) is not tree-shaken.
 
