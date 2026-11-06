@@ -29,7 +29,7 @@ module.exports = {
 };
 ```
 
-That's it. `react-native bundle`, `react-native run-android --mode release`, Xcode Release builds, etc. now produce tree-shaken bundles. Development builds behave as before.
+That's it. `react-native bundle`, release builds and Xcode Release builds now produce tree-shaken bundles. Development builds behave as before.
 
 ## Compatibility
 
@@ -38,8 +38,6 @@ That's it. `react-native bundle`, `react-native run-android --mode release`, Xco
 | 0.86         | 0.84  |
 | 0.87         | 0.87  |
 | 0.88         | 0.87  |
-
-Metro 0.84 can't transform `export * as ns from`; on that version it's rewritten automatically (`import * as ns` + `export { ns }`).
 
 ## Report
 
@@ -54,56 +52,46 @@ metro-tree-shaking: 14 modules could not be fully tree-shaken
   Set METRO_TREE_SHAKING_REPORT=1 for details, or 0 to hide this report.
 ```
 
-| `METRO_TREE_SHAKING_REPORT` | Output |
-| --- | --- |
-| not set | short summary |
-| `1` | every file (app files one by one, `node_modules` grouped by package) and who imports it |
-| `0` | nothing |
-
-```sh
-METRO_TREE_SHAKING_REPORT=1 npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output /tmp/main.jsbundle
-```
-
-`react` and `react-native` are left out of the report: every app ships them and can't change how they're written.
-
-App files in the report are the ones you can fix: use named imports instead of `import * as` / `require()`, and ES modules instead of `module.exports`.
+Set `METRO_TREE_SHAKING_REPORT=1` to list every file and who imports it, or `0` to hide the report. `react` and `react-native` are left out. App files in the report are the ones you can fix: use named imports instead of `import * as` / `require()`, and ES modules instead of `module.exports`.
 
 ## How it works
 
-`withTreeShaking(config)`:
+1. **Transform worker:** production JS modules are kept as ES modules, with their AST and import/export information (Expo's "optimize" mode). Everything else goes to the original `metro-transform-worker`.
+2. **Serializer:** Expo's graph tree shaker removes unused exports and imports, honoring `package.json#sideEffects`. The deferred transform steps then run (import/export → `require`, module wrapping, minification), and modules no longer imported are dropped. An existing `customSerializer` receives the tree-shaken graph.
 
-1. **Transform worker**: `transformerPath` points to a worker that, for production JS modules, keeps them as ES modules and stores their AST and import/export information (Expo's "optimize" mode). Everything else (dev builds, JSON, assets, scripts) is delegated to the original `metro-transform-worker`.
-2. **Serializer**: before the bundle is written, Expo's graph tree shaker removes unused exports and imports across the whole graph, honoring `package.json#sideEffects`. The deferred transform steps then run (import/export → `require`, dependency collection, module wrapping, minification), and modules that are no longer imported are dropped.
-3. **`experimentalImportSupport: true`** is forced, since Babel no longer converts `import`/`export`.
-
-An existing `serializer.customSerializer` is kept: it receives the tree-shaken graph.
-
-The tree-shaking logic is copied from [`@expo/metro-config`](https://github.com/expo/expo/tree/main/packages/@expo/metro-config) (SDK 58) and kept as local files; see the header of each file in `src/` for what was changed. To pull in upstream changes, follow [SYNCING.md](SYNCING.md). The final `import`/`export` transform uses Metro's own `importExportPlugin` (the same one Metro uses in development with `experimentalImportSupport`) instead of Expo's fork.
-
-Improvements over Expo:
-
-- An export referenced only from inside its own declaration (a recursive function) or through a local binding that shadows it is treated as unused. This matters for React Native because `@react-native/babel-preset` compiles classes to functions with the `default` transform profile (`var A = function () { function A() {} … }()`), which made every exported class look used.
-- Import order doesn't matter. In Expo, every import of a file is treated like the file's first one, so a side-effect import (`import 'lib/polyfill'`) after a named import could be removed.
-- `export * as ns from` is supported. `babel-preset-expo` rewrites it before tree shaking, but `@react-native/babel-preset` keeps it, and Expo's logic then removed exports used through `ns`.
+The code is copied from [`@expo/metro-config`](https://github.com/expo/expo/tree/main/packages/@expo/metro-config) (SDK 58) into `src/`. [SYNCING.md](SYNCING.md) explains how to pull in upstream changes.
 
 ## Tips & limitations
 
 - **Production only.** Like Expo, nothing is removed when `dev: true`.
-- **`package.json#sideEffects`.** Unused exports are removed in every case. Whether a whole imported module can be dropped depends on the field (a list of globs is matched per file):
+- **`package.json#sideEffects`.** Unused exports are always removed. Whether a whole module can be dropped depends on the field (globs are matched per file):
 
   | | no field | `false` | `true` |
   | --- | --- | --- | --- |
-  | Module imported only for names that are never used (`import { x } from 'lib'`) | removed, including its top-level code | removed | kept |
-  | Module imported for its side effects (`import 'lib/polyfill'`) | kept | removed | kept |
+  | Imported only for unused names (`import { x } from 'lib'`) | removed | removed | kept |
+  | Imported for side effects (`import 'lib/polyfill'`) | kept | removed | kept |
 
-  A module counts as `true` if it, or anything it imports, is marked `true`. Modules without any code are always removed (a module that only becomes empty after tree shaking is still bundled when marked `true`). If a package without the field relies on top-level code that runs on import, import it for side effects (`import 'lib'`) or mark it `"sideEffects": true`.
-- **CommonJS isn't shaken.** Modules using `module.exports`/`exports` or `require()` keep all their exports, and so does `export * from` a CommonJS module.
-- **Namespaces keep the whole module.** `import * as ns` and `export * as ns from` keep every export of the module once `ns` is used, since any property may be read; an unused `ns` is removed. Prefer named imports. `export * from` an ES module is shaken like named re-exports.
-- **Dev server.** Requests with `dev=false` to the dev server are tree-shaken on a copy of the graph. The source map served separately for such a request (`.map` URL) is not tree-shaken.
+  A module counts as `true` if anything it imports is `true`. If a package without the field relies on code that runs on import, import it for side effects or mark it `"sideEffects": true`.
+- **CommonJS isn't shaken.** `module.exports` / `require()` modules keep all their exports, and so does `export * from` a CommonJS module.
+- **Namespaces keep the whole module.** `import * as ns` and `export * as ns from` keep every export once `ns` is used. Prefer named imports.
+- **Dev server.** `dev=false` requests are tree-shaken, but their separately served `.map` is not.
+
+## Differences from Expo
+
+- **No Expo needed:** works with plain `react-native bundle` and `@react-native/babel-preset`.
+- **On by default** in production builds. Expo needs `EXPO_UNSTABLE_TREE_SHAKING=1` and `EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH=1`.
+- **Fixes on top of Expo's code:**
+  - Unused classes are removed. `@react-native/babel-preset` compiles classes to functions that reference themselves, which Expo counts as usage. The same applies to recursive functions.
+  - A side-effect import (`import 'lib/polyfill'`) after a named import of the same file is no longer dropped.
+  - `export * as ns from` works. `babel-preset-expo` rewrites it before tree shaking, `@react-native/babel-preset` doesn't, and Expo's logic then removed exports used through `ns`. On Metro 0.84 it's rewritten automatically.
+- **A report** of what couldn't be tree-shaken.
+- **Tree shaking only:** no `Platform.OS` / `process.env` inlining from `babel-preset-expo`. Metro's own `inlinePlugin` handles `Platform.OS` and `__DEV__`.
+
+See [SYNCING.md](SYNCING.md#local-deviations-keep-these) for every change from Expo's code.
 
 ## Examples
 
-[`examples/`](examples) builds the same app with React Native + this package, Expo and Re.Pack, using `react-native-reanimated`, `react-native-svg`, `lucide-react-native`, `date-fns` and `lodash-es`. On that app the production bundle goes from 4243 KB to 1349 KB. See [examples/README.md](examples/README.md).
+[`examples/`](examples) builds the same app with this package, rnx-kit, Expo and Re.Pack, using `react-native-reanimated`, `react-native-svg`, `lucide-react-native`, `date-fns` and `lodash-es`. The production bundle goes from 4243 KB to 1349 KB (Expo's is 1582 KB, mostly because of the Expo runtime). It also measures each import style per library, in JavaScript and Hermes bytecode. See [examples/README.md](examples/README.md).
 
 ## Tests
 
