@@ -21,6 +21,12 @@ const REASONS = {
   'dynamic-import': 'ES modules loaded with import(), all exports kept',
 };
 
+/** Importers listed per module in the detailed report. */
+const MAX_DETAILS = 3;
+
+/** Packages left out of the report: every app ships them and can't change how they're written. */
+const IGNORED_PACKAGES = new Set(['react', 'react-native']);
+
 const NAMESPACE_SYNTAX = {
   ImportDeclaration: 'import * as',
   ExportNamedDeclaration: 'export * as',
@@ -133,6 +139,7 @@ function formatReport(report, graph, options, mode) {
   for (const [modulePath, reasons] of report) {
     // Modules removed by tree shaking don't matter.
     if (!graph.dependencies.has(modulePath)) continue;
+    if (IGNORED_PACKAGES.has(getPackageName(modulePath))) continue;
     moduleCount++;
     for (const [reason, details] of reasons) {
       byReason.get(reason).push({ modulePath, details: [...details] });
@@ -172,7 +179,12 @@ function formatReport(report, graph, options, mode) {
       }
       for (const entry of group) {
         const file = displayPath({ ...entry, options });
-        const details = entry.details.length ? `  (${entry.details.join('; ')})` : '';
+        // Shared modules can have many importers, show the first few.
+        const shown = entry.details.slice(0, MAX_DETAILS);
+        if (entry.details.length > MAX_DETAILS) {
+          shown.push(`+${entry.details.length - MAX_DETAILS} more`);
+        }
+        const details = shown.length ? `  (${shown.join('; ')})` : '';
         lines.push(`${isPackage ? '      ' : '    '}${file}${details}`);
       }
     }

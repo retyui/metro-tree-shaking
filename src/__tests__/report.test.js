@@ -110,3 +110,36 @@ it.each([
 ])(`METRO_TREE_SHAKING_REPORT=%s is %s`, (value, mode) => {
   expect(getReportMode({ METRO_TREE_SHAKING_REPORT: value })).toBe(mode);
 });
+
+it(`lists at most 3 importers per module`, async () => {
+  process.env.METRO_TREE_SHAKING_REPORT = '1';
+  await serializeShakingAsync({
+    'index.js': `import './a'; import './b'; import './c'; import './d';`,
+    'a.js': `require('./math');`,
+    'b.js': `require('./math');`,
+    'c.js': `require('./math');`,
+    'd.js': `require('./math');`,
+    'math.js': math,
+  });
+  expect(warn.mock.calls.flat().join('\n')).toMatch(
+    '    math.js  (by a.js; by b.js; by c.js; +1 more)'
+  );
+});
+
+it(`leaves react and react-native out of the report`, async () => {
+  process.env.METRO_TREE_SHAKING_REPORT = '1';
+  await serializeShakingAsync({
+    'index.js': `
+import * as React from './node_modules/react/index.js';
+import * as RN from './node_modules/react-native/index.js';
+import * as M from './src/math.js';
+console.log(React.a, RN.a, M.a);
+`,
+    'node_modules/react/index.js': math,
+    'node_modules/react-native/index.js': math,
+    'src/math.js': math,
+  });
+  const output = warn.mock.calls.flat().join('\n');
+  expect(output).toMatch('src/math.js  (import * as, by index.js)');
+  expect(output).not.toMatch('react');
+});

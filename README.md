@@ -64,6 +64,8 @@ metro-tree-shaking: 14 modules could not be fully tree-shaken
 METRO_TREE_SHAKING_REPORT=1 npx react-native bundle --platform ios --dev false --entry-file index.js --bundle-output /tmp/main.jsbundle
 ```
 
+`react` and `react-native` are left out of the report: every app ships them and can't change how they're written.
+
 App files in the report are the ones you can fix: use named imports instead of `import * as` / `require()`, and ES modules instead of `module.exports`.
 
 ## How it works
@@ -98,6 +100,10 @@ Improvements over Expo:
 - **CommonJS isn't shaken.** Modules using `module.exports`/`exports` or `require()` keep all their exports, and so does `export * from` a CommonJS module.
 - **Namespaces keep the whole module.** `import * as ns` and `export * as ns from` keep every export of the module once `ns` is used, since any property may be read; an unused `ns` is removed. Prefer named imports. `export * from` an ES module is shaken like named re-exports.
 - **Dev server.** Requests with `dev=false` to the dev server are tree-shaken on a copy of the graph. The source map served separately for such a request (`.map` URL) is not tree-shaken.
+
+## Examples
+
+[`examples/`](examples) builds the same app with React Native + this package, Expo and Re.Pack, using `react-native-reanimated`, `react-native-svg`, `lucide-react-native`, `date-fns` and `lodash-es`. On that app the production bundle goes from 4243 KB to 1349 KB. See [examples/README.md](examples/README.md).
 
 ## Tests
 

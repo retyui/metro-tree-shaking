@@ -1,0 +1,27 @@
+{
+  "name": "expo-example",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "date-fns": "4.4.0",
+    "expo": "~58.0.23",
+    "expo-status-bar": "~58.0.4",
+    "lodash-es": "4.18.1",
+    "lucide-react-native": "1.69.0",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-reanimated": "4.7.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-svg": "15.16.0",
+    "react-native-worklets": "0.13.0"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "bundle:ios": "EXPO_UNSTABLE_TREE_SHAKING=1 EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH=1 expo export --platform ios --no-bytecode --source-maps --output-dir build/tree-shaking --clear",
+    "bundle:ios:baseline": "expo export --platform ios --no-bytecode --source-maps --output-dir build/baseline --clear"
+  },
+  "private": true
+}

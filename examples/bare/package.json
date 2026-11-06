@@ -1,0 +1,54 @@
+{
+  "name": "BareApp",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "lint": "eslint .",
+    "start": "react-native start",
+    "test": "jest",
+    "bundle:ios": "react-native bundle --platform ios --dev false --minify true --reset-cache --entry-file index.js --bundle-output build/ios.bundle --sourcemap-output build/ios.bundle.map --assets-dest build/assets",
+    "bundle:ios:rnx-kit": "RNX_KIT=1 react-native bundle --platform ios --dev false --minify true --reset-cache --entry-file index.js --bundle-output build/ios-rnx-kit.bundle --sourcemap-output build/ios-rnx-kit.bundle.map --assets-dest build/assets",
+    "bundle:ios:baseline": "NO_TREE_SHAKING=1 react-native bundle --platform ios --dev false --minify true --reset-cache --entry-file index.js --bundle-output build/ios-baseline.bundle --sourcemap-output build/ios-baseline.bundle.map --assets-dest build/assets"
+  },
+  "dependencies": {
+    "@react-native/new-app-screen": "0.88.1",
+    "date-fns": "4.4.0",
+    "lodash-es": "4.18.1",
+    "lucide-react-native": "1.69.0",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-reanimated": "4.7.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-svg": "15.16.0",
+    "react-native-worklets": "0.13.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/plugin-transform-export-namespace-from": "^7.27.1",
+    "@babel/preset-env": "^7.25.3",
+    "@babel/runtime": "^7.25.0",
+    "@react-native-community/cli": "20.2.0",
+    "@react-native-community/cli-platform-android": "20.2.0",
+    "@react-native-community/cli-platform-ios": "20.2.0",
+    "@react-native/babel-preset": "0.88.1",
+    "@react-native/eslint-config": "0.88.1",
+    "@react-native/jest-preset": "0.88.1",
+    "@react-native/metro-config": "0.88.1",
+    "@react-native/typescript-config": "0.88.1",
+    "@rnx-kit/metro-serializer-esbuild": "0.4.2",
+    "@types/jest": "^29.5.13",
+    "@types/react": "^19.2.0",
+    "@types/react-test-renderer": "^19.1.0",
+    "eslint": "^8.19.0",
+    "jest": "^29.6.3",
+    "metro-tree-shaking": "link:../..",
+    "prettier": "2.8.8",
+    "react-test-renderer": "19.3.0",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">= 22.11.0"
+  }
+}
